@@ -69,9 +69,6 @@ component("libc++") {
     "//build/config/compiler:no_rtti",
     "//build/config/coverage:default_coverage",
   ]
-  if (is_android && is_component_build) {
-    configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
-  }
   configs += [
     ":config",
     "//build/config/compiler:no_chromium_code",
