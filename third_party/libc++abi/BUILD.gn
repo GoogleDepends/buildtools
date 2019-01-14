@@ -82,7 +82,7 @@ if (use_custom_libcxx) {
       "//buildtools/third_party/libc++:config",
     ]
 
-    if (export_libcxxabi_from_executables) {
+    if (export_libcxxabi_from_executables || libcxx_is_shared) {
       configs -= [ "//build/config/gcc:symbol_visibility_hidden" ]
       configs += [ "//build/config/gcc:symbol_visibility_default" ]
     }
@@ -95,7 +95,7 @@ source_set("cxa_demangle_stub") {
   # use_custom_libcxx=true.  When this happens, this target can be removed,
   # cxa_demangle_stub.cc can be added to the libc++abi target above, and
   # __cxa_demangle can simply be annoted with _LIBCXXABI_FUNC_VIS.
-  if (use_custom_libcxx && is_component_build) {
+  if (use_custom_libcxx && libcxx_is_shared) {
     defines = [ "EXPORT_CXA_DEMANGLE" ]
   }
   sources = [

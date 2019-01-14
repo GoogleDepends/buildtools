@@ -18,11 +18,14 @@ config("config") {
   }
 }
 
-component("libc++") {
-  if (is_component_build) {
+if (libcxx_is_shared) {
+  _libcxx_target_type = "shared_library"
+} else {
+  _libcxx_target_type = "source_set"
+}
+target(_libcxx_target_type, "libc++") {
+  if (libcxx_is_shared) {
     no_default_deps = true
-  } else {
-    static_component_type = "source_set"
   }
   sources = [
     "trunk/src/algorithm.cpp",
@@ -69,6 +72,9 @@ component("libc++") {
     "//build/config/compiler:no_rtti",
     "//build/config/coverage:default_coverage",
   ]
+  if (is_android && libcxx_is_shared) {
+    configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
+  }
   configs += [
     ":config",
     "//build/config/compiler:no_chromium_code",
@@ -76,16 +82,20 @@ component("libc++") {
     "//build/config/compiler:rtti",
     "//build/config/sanitizers:sanitizer_options_link_helper",
   ]
+  if (libcxx_is_shared) {
+    configs -= [ "//build/config/gcc:symbol_visibility_hidden" ]
+    configs += [ "//build/config/gcc:symbol_visibility_default" ]
+  }
 
   defines = [ "_LIBCPP_BUILDING_LIBRARY" ]
-  if (!is_clang && is_component_build) {
+  if (!is_clang && libcxx_is_shared) {
     # This is a temporary workaround to get libc++ builds working with
     # gcc.  It can be removed with either
     # https://reviews.llvm.org/D35326 or
     # https://reviews.llvm.org/D35388 lands.
     defines += [ "_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS=__attribute__((__visibility__(\"default\")))" ]
   }
-  if (!is_component_build) {
+  if (!libcxx_is_shared) {
     defines += [
       # This resets the visibility to default only for the various
       # flavors of operator new and operator delete.  These symbols
