@@ -96,23 +96,32 @@ target(_libcxx_target_type, "libc++") {
     defines += [ "_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS=__attribute__((__visibility__(\"default\")))" ]
   }
   if (!libcxx_is_shared) {
-    defines += [
-      # This resets the visibility to default only for the various
-      # flavors of operator new and operator delete.  These symbols
-      # are weak and get overriden by Chromium-provided ones, but if
-      # these symbols had hidden visibility, this would make the
-      # Chromium symbols hidden too because elf visibility rules
-      # require that linkers use the least visible form when merging,
-      # and if this is hidden, then when we merge it with tcmalloc's
-      # operator new, hidden visibility would win. However, tcmalloc
-      # needs a visible operator new to also override operator new
-      # references from system libraries.
-      # TODO(lld): Ask lld for a --force-public-visibility flag or
-      # similar to that overrides the default elf merging rules, and
-      # make tcmalloc's gn config pass that to all its dependencies,
-      # then remove this override here.
-      "_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
-    ]
+    if (is_mac && is_clang) {
+      # We want operator new/delete to be private on Mac, but these functions
+      # are implicitly created by the compiler for each translation unit, as
+      # specified in the C++ spec 3.7.4p2, which makes them always have default
+      # visibility.  This option is needed to force hidden visibility since
+      # -fvisibility=hidden doesn't have the desired effect.
+      cflags = [ "-fvisibility-global-new-delete-hidden" ]
+    } else {
+      defines += [
+        # This resets the visibility to default only for the various
+        # flavors of operator new and operator delete.  These symbols
+        # are weak and get overriden by Chromium-provided ones, but if
+        # these symbols had hidden visibility, this would make the
+        # Chromium symbols hidden too because elf visibility rules
+        # require that linkers use the least visible form when merging,
+        # and if this is hidden, then when we merge it with tcmalloc's
+        # operator new, hidden visibility would win. However, tcmalloc
+        # needs a visible operator new to also override operator new
+        # references from system libraries.
+        # TODO(lld): Ask lld for a --force-public-visibility flag or
+        # similar to that overrides the default elf merging rules, and
+        # make tcmalloc's gn config pass that to all its dependencies,
+        # then remove this override here.
+        "_LIBCPP_OVERRIDABLE_FUNC_VIS=__attribute__((__visibility__(\"default\")))",
+      ]
+    }
   }
   if (is_asan || is_tsan || is_msan) {
     # In {a,t,m}san configurations, operator new and operator delete will be
